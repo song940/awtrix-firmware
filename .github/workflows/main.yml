@@ -28,5 +28,5 @@ jobs:
       - name: Upload .bin firmware
         uses: actions/upload-artifact@v1
         with:
-          name: firmware.bin
-          path: ./.pio/build/esp_wroom_02/firmware.bin
+          name: awtrix-firmware.bin
+          path: ./.pio/build/nodemcuv2/firmware.bin

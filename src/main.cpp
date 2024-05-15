@@ -1458,29 +1458,6 @@ void setup()
 			ESP.reset();
 		}
 	}
-	/*
-		if (drd.detect())
-		{
-			//Serial.println("** Double reset boot **");
-			matrix->clear();
-			matrix->setTextColor(matrix->Color(255, 0, 0));
-			matrix->setCursor(6, 6);
-			matrix->print("RESET!");
-			matrix->show();
-			delay(1000);
-			if (LittleFS.begin())
-			{
-				delay(1000);
-				LittleFS.remove("/awtrix.json");
-
-				LittleFS.end();
-				delay(1000);
-			}
-			wifiManager.resetSettings();
-			ESP.reset();
-		}
-		*/
-
 	wifiManager.setAPStaticIPConfig(IPAddress(172, 217, 28, 1), IPAddress(172, 217, 28, 1), IPAddress(255, 255, 255, 0));
 	WiFiManagerParameter custom_awtrix_server("server", "AWTRIX Host", awtrix_server, 16);
 	WiFiManagerParameter custom_port("Port", "Matrix Port", Port, 6);
