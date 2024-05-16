@@ -1,7 +1,6 @@
 // AWTRIX Controller
 // Copyright (C) 2020
 // by Blueforcer & Mazze2000
-
 #include <LittleFS.h>
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
@@ -25,8 +24,6 @@
 #define I2C_SDA D3
 #define I2C_SCL D1
 
-BME280<> BMESensor;
-
 WiFiClient wifi;
 WiFiManager wifiManager;
 PubSubClient mqtt(wifi);
@@ -39,6 +36,7 @@ void onMessage(char *topic, byte *payload, unsigned int length);
 // Matrix Settings
 CRGB leds[256];
 FastLED_NeoMatrix *matrix;
+BME280<> BMESensor;
 
 // Taster_mid
 int tasterPin[] = {D0, D4, D8};
@@ -54,7 +52,9 @@ class Mp3Notify;
 SoftwareSerial serial(D7, D5); // RX, TX
 typedef DFMiniMp3<SoftwareSerial, Mp3Notify> DfMp3;
 DfMp3 dfmp3(serial);
-class Mp3Notify{};
+class Mp3Notify
+{
+};
 
 void setup()
 {
@@ -86,11 +86,13 @@ void setup()
 
 	WiFi.begin("wifi@lsong.one", "song940@163.com");
 	Serial.println("Connecting to " + String(WiFi.SSID()));
-	while (WiFi.status() != WL_CONNECTED){
+	while (WiFi.status() != WL_CONNECTED)
+	{
 		Serial.print(".");
 		delay(500);
 	}
-	Serial.println("Connected:" + WiFi.localIP().toString());
+	Serial.println();
+	Serial.println("Connected: " + WiFi.localIP().toString());
 
 	// dfmp3.setVolume(15);
 	// delay(10);
@@ -103,10 +105,10 @@ void setup()
 void reconnect()
 {
 	String clientId = "AWTRIXController-" + String(ESP.getChipId(), HEX);
-	Serial.println("connect to " + String(mqtt_server) + " as " + clientId);
+	Serial.println("connect to "  +String(mqtt_server) + " as " + clientId);
 	if (mqtt.connect(clientId.c_str()))
 	{
-		Serial.println("connected");
+		mqtt.subscribe("test/#");
 	}
 }
 
@@ -120,6 +122,10 @@ void loop()
 	if (!mqtt.connected())
 	{
 		reconnect();
+	}
+	else
+	{
+		mqtt.loop();
 	}
 	web.handleClient();
 	float lux = ldr.getCurrentLux();
