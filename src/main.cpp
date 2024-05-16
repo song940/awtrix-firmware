@@ -25,18 +25,16 @@
 #define I2C_SDA D3
 #define I2C_SCL D1
 
-// instantiate temp sensor
 BME280<> BMESensor;
-// Adafruit_BMP280 BMPSensor; // use I2C interface
-// Adafruit_HTU21DF htu = Adafruit_HTU21DF();
 
 WiFiClient wifi;
 WiFiManager wifiManager;
 PubSubClient mqtt(wifi);
 ESP8266WebServer web(80);
 
-char mqtt_server[16] = "0.0.0.0";
-char mqtt_port[6] = "7001";
+char mqtt_server[16] = "192.168.2.220";
+char mqtt_port[6] = "1883";
+void onMessage(char *topic, byte *payload, unsigned int length);
 
 // Matrix Settings
 CRGB leds[256];
@@ -53,37 +51,10 @@ int tasterCount = 3;
 LightDependentResistor ldr(LDR_PIN, LDR_RESISTOR, LDR_PHOTOCELL);
 
 class Mp3Notify;
-SoftwareSerial mySoftwareSerial(D7, D5); // RX, TX
+SoftwareSerial serial(D7, D5); // RX, TX
 typedef DFMiniMp3<SoftwareSerial, Mp3Notify> DfMp3;
-DfMp3 dfmp3(mySoftwareSerial);
-
-class Mp3Notify
-{
-};
-
-void showText(char *text)
-{
-	matrix->clear();
-	matrix->setCursor(7, 6);
-	for (int x = 32; x >= -90; x--)
-	{
-		matrix->clear();
-		matrix->setCursor(x, 6);
-		matrix->print(text);
-		matrix->setTextColor(matrix->Color(0, 255, 50));
-		matrix->show();
-		delay(40);
-	}
-}
-
-void saveConfigCallback()
-{
-}
-
-void onMessage(char *topic, byte *payload, unsigned int length)
-{
-	Serial.println("incoming: " + String(topic));
-}
+DfMp3 dfmp3(serial);
+class Mp3Notify{};
 
 void setup()
 {
@@ -94,11 +65,11 @@ void setup()
 
 	Serial.setRxBufferSize(1024);
 	Serial.begin(115200);
-	mySoftwareSerial.begin(9600);
+	serial.begin(9600);
 	dfmp3.begin();
-	// dfmp3.setVolume(15);
-	// delay(10);
-	// dfmp3.playRandomTrackFromAll();
+	web.begin();
+	Wire.begin(I2C_SDA, I2C_SCL);
+	BMESensor.begin();
 
 	FastLED.addLeds<NEOPIXEL, D2>(leds, 256).setCorrection(TypicalLEDStrip);
 	matrix = new FastLED_NeoMatrix(leds, 32, 8, NEO_MATRIX_TOP + NEO_MATRIX_LEFT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG);
@@ -113,31 +84,19 @@ void setup()
 	matrix->show();
 	delay(2000);
 
-	Wire.begin(I2C_SDA, I2C_SCL);
-	BMESensor.begin();
+	WiFi.begin("wifi@lsong.one", "song940@163.com");
+	Serial.println("Connecting to " + String(WiFi.SSID()));
+	while (WiFi.status() != WL_CONNECTED){
+		Serial.print(".");
+		delay(500);
+	}
+	Serial.println("Connected:" + WiFi.localIP().toString());
+
+	// dfmp3.setVolume(15);
+	// delay(10);
+	// dfmp3.playRandomTrackFromAll();
 	ldr.setPhotocellPositionOnGround(false);
-
-	WiFiManagerParameter custom_server("server", "MQTT Server", mqtt_server, 16);
-	WiFiManagerParameter custom_port("port", "MQTT Port", mqtt_port, 6);
-	wifiManager.addParameter(&custom_server);
-	wifiManager.addParameter(&custom_port);
-	wifiManager.setSaveConfigCallback(saveConfigCallback);
-	if (wifiManager.autoConnect("AWTRIX Controller", "awtrixxx"))
-	{
-		Serial.println("connected...yeey :)");
-		Serial.println("Local IP: ");
-		Serial.println(WiFi.localIP());
-		strcpy(mqtt_server, custom_server.getValue());
-		strcpy(mqtt_port, custom_port.getValue());
-	}
-	else
-	{
-		ESP.reset();
-		delay(5000);
-	}
-
-	web.begin();
-	mqtt.setServer(mqtt_server, atoi(mqtt_port));
+	mqtt.setServer("192.168.2.220", 1883);
 	mqtt.setCallback(onMessage);
 }
 
@@ -151,6 +110,11 @@ void reconnect()
 	}
 }
 
+void onMessage(char *topic, byte *payload, unsigned int length)
+{
+	Serial.println("incoming: " + String(topic));
+}
+
 void loop()
 {
 	if (!mqtt.connected())
@@ -158,16 +122,17 @@ void loop()
 		reconnect();
 	}
 	web.handleClient();
-	BMESensor.refresh();
 	float lux = ldr.getCurrentLux();
+	int brightness = map(lux, 0, 1000, 5, 255);
 	// Serial.println("LDR: " + String(lux));
-	int brightness = map(lux, 0, 300, 0, 255);
-	matrix->clear();
 	matrix->setBrightness(brightness);
+	matrix->clear();
 	matrix->drawCircle(3, 3, 3, matrix->Color(255, 0, 255));
 	matrix->setCursor(8, 6);
 	matrix->print(String(lux));
 	matrix->show();
+
+	// BMESensor.refresh();
 	// Serial.println("Temp: " + String(BMESensor.temperature) + "°C, Press: " + String(BMESensor.pressure) + "hPa");
 	// for (int i = 0; i < tasterCount; i++)
 	// {
