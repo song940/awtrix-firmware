@@ -35,6 +35,9 @@ WiFiManager wifiManager;
 PubSubClient mqtt(wifi);
 ESP8266WebServer web(80);
 
+char mqtt_server[16] = "0.0.0.0";
+char mqtt_port[6] = "7001";
+
 // Matrix Settings
 CRGB leds[256];
 FastLED_NeoMatrix *matrix;
@@ -73,6 +76,15 @@ void showText(char *text)
 	}
 }
 
+void saveConfigCallback()
+{
+}
+
+void onMessage(char *topic, byte *payload, unsigned int length)
+{
+	Serial.println("incoming: " + String(topic));
+}
+
 void setup()
 {
 	for (int i = 0; i < tasterCount; i++)
@@ -84,7 +96,6 @@ void setup()
 	Serial.begin(115200);
 	mySoftwareSerial.begin(9600);
 	dfmp3.begin();
-	web.begin();
 	// dfmp3.setVolume(15);
 	// delay(10);
 	// dfmp3.playRandomTrackFromAll();
@@ -106,12 +117,46 @@ void setup()
 	BMESensor.begin();
 	ldr.setPhotocellPositionOnGround(false);
 
-	// mqtt.setServer(awtrix_server, atoi(Port));
-	// mqtt.setCallback(callback);
+	WiFiManagerParameter custom_server("server", "MQTT Server", mqtt_server, 16);
+	WiFiManagerParameter custom_port("port", "MQTT Port", mqtt_port, 6);
+	wifiManager.addParameter(&custom_server);
+	wifiManager.addParameter(&custom_port);
+	wifiManager.setSaveConfigCallback(saveConfigCallback);
+	if (wifiManager.autoConnect("AWTRIX Controller", "awtrixxx"))
+	{
+		Serial.println("connected...yeey :)");
+		Serial.println("Local IP: ");
+		Serial.println(WiFi.localIP());
+		strcpy(mqtt_server, custom_server.getValue());
+		strcpy(mqtt_port, custom_port.getValue());
+	}
+	else
+	{
+		ESP.reset();
+		delay(5000);
+	}
+
+	web.begin();
+	mqtt.setServer(mqtt_server, atoi(mqtt_port));
+	mqtt.setCallback(onMessage);
+}
+
+void reconnect()
+{
+	String clientId = "AWTRIXController-" + String(ESP.getChipId(), HEX);
+	Serial.println("connect to " + String(mqtt_server) + " as " + clientId);
+	if (mqtt.connect(clientId.c_str()))
+	{
+		Serial.println("connected");
+	}
 }
 
 void loop()
 {
+	if (!mqtt.connected())
+	{
+		reconnect();
+	}
 	web.handleClient();
 	BMESensor.refresh();
 	float lux = ldr.getCurrentLux();
