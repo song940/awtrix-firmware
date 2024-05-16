@@ -39,28 +39,27 @@ ESP8266WebServer web(80);
 CRGB leds[256];
 FastLED_NeoMatrix *matrix;
 
-//Taster_mid
+// Taster_mid
 int tasterPin[] = {D0, D4, D8};
 int tasterCount = 3;
 
-
 /// LDR Config
 #define LDR_PIN A0
-#define LDR_RESISTOR 1000 //ohms
+#define LDR_RESISTOR 1000 // ohms
 #define LDR_PHOTOCELL LightDependentResistor::GL5516
 LightDependentResistor ldr(LDR_PIN, LDR_RESISTOR, LDR_PHOTOCELL);
 
-class Mp3Notify; 
+class Mp3Notify;
 SoftwareSerial mySoftwareSerial(D7, D5); // RX, TX
-typedef DFMiniMp3<SoftwareSerial, Mp3Notify> DfMp3; 
+typedef DFMiniMp3<SoftwareSerial, Mp3Notify> DfMp3;
 DfMp3 dfmp3(mySoftwareSerial);
 
 class Mp3Notify
 {
-
 };
 
-void showText(char* text) {
+void showText(char *text)
+{
 	matrix->clear();
 	matrix->setCursor(7, 6);
 	for (int x = 32; x >= -90; x--)
@@ -89,7 +88,7 @@ void setup()
 	// dfmp3.setVolume(15);
 	// delay(10);
 	// dfmp3.playRandomTrackFromAll();
-	
+
 	FastLED.addLeds<NEOPIXEL, D2>(leds, 256).setCorrection(TypicalLEDStrip);
 	matrix = new FastLED_NeoMatrix(leds, 32, 8, NEO_MATRIX_TOP + NEO_MATRIX_LEFT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG);
 	matrix->begin();
@@ -114,21 +113,21 @@ void setup()
 void loop()
 {
 	web.handleClient();
-	ArduinoOTA.handle();
+	BMESensor.refresh();
 	float lux = ldr.getCurrentLux();
 	// Serial.println("LDR: " + String(lux));
 	int brightness = map(lux, 0, 300, 0, 255);
 	matrix->clear();
 	matrix->setBrightness(brightness);
-	matrix->setCursor(0, 6);
-	matrix->print("Lux: " + String(lux));
+	matrix->drawCircle(3, 3, 3, matrix->Color(255, 0, 255));
+	matrix->setCursor(8, 6);
+	matrix->print(String(lux));
 	matrix->show();
-	BMESensor.refresh();
 	// Serial.println("Temp: " + String(BMESensor.temperature) + "°C, Press: " + String(BMESensor.pressure) + "hPa");
+	// for (int i = 0; i < tasterCount; i++)
+	// {
+	// 	uint8_t state = digitalRead(tasterPin[i]);
+	// 	Serial.println("Taster " + String(i) + ": " + String(state));
+	// }
 	delay(100);
-	for (int i = 0; i < tasterCount; i++)
-	{
-		uint8_t state = digitalRead(tasterPin[i]);
-		Serial.println("Taster " + String(i) + ": " + String(state));
-	}
 }
